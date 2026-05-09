@@ -63,10 +63,10 @@ export default function LeadTable({ leads, onGenerateOutreach, onSaveLead }: Lea
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-3 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                         <button 
                             onClick={() => onGenerateOutreach(lead)}
-                            className="text-brand-accent font-bold hover:underline transition-all"
+                            className="text-brand-accent font-bold hover:underline transition-all text-[10px] lg:text-xs"
                         >
                             Gen Script
                         </button>
@@ -74,7 +74,7 @@ export default function LeadTable({ leads, onGenerateOutreach, onSaveLead }: Lea
                             onClick={() => onSaveLead(lead)}
                             className="text-[#3F3F46] hover:text-white transition-colors"
                         >
-                            <Bookmark className="w-4 h-4" />
+                            <Bookmark className="w-3.5 h-3.5 lg:w-4 h-4" />
                         </button>
                     </div>
                   </td>

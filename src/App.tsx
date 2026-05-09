@@ -14,7 +14,9 @@ import {
   Search as SearchIcon,
   Filter,
   RefreshCw,
-  Plus
+  Plus,
+  Menu,
+  X
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import Sidebar from './components/Sidebar';
@@ -41,9 +43,16 @@ export default function App() {
   const [outreachScripts, setOutreachScripts] = useState<OutreachScripts | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Initialize Gemini
-  const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  // Initialize Gemini safely
+  const getGenAI = () => {
+    const apiKey = typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'undefined') {
+      throw new Error('Gemini API Key is missing. Please set GEMINI_API_KEY environment variable.');
+    }
+    return new GoogleGenAI({ apiKey });
+  };
 
   const handleGenerateOutreach = async (lead: Lead) => {
     setSelectedLead(lead);
@@ -51,6 +60,7 @@ export default function App() {
     setOutreachScripts(null);
 
     try {
+      const genAI = getGenAI();
       const prompt = `Generate a high-conversion, professional outreach strategy for a business called "${lead.name}" in the "${lead.niche}" niche based in ${lead.location}.
       Their website is ${lead.website}. 
       
@@ -128,33 +138,49 @@ export default function App() {
 
   return (
     <div className="flex bg-[#050505] min-h-screen text-[#E5E5E5] font-sans">
-      <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+      <Sidebar 
+        currentView={currentView} 
+        onViewChange={(view) => {
+          setCurrentView(view);
+          setIsMobileMenuOpen(false);
+        }} 
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+      />
       
-      <main className="flex-1 ml-60 flex flex-col h-screen overflow-hidden">
+      <main className="flex-1 lg:ml-60 flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b border-[#1A1A1A] px-8 flex items-center justify-between bg-[#050505]/50 backdrop-blur-md sticky top-0 z-40">
-          <div className="flex items-center gap-4 text-sm text-[#71717A] font-medium">
-            <span>Dashboard</span>
-            <span className="text-[#3F3F46] font-light">/</span>
-            <span className="text-white capitalize tracking-tight font-semibold">{currentView.replace('-', ' ')}</span>
+        <header className="h-16 border-b border-[#1A1A1A] px-4 lg:px-8 flex items-center justify-between bg-[#050505]/50 backdrop-blur-md sticky top-0 z-40">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 hover:bg-[#111111] rounded-lg transition-colors"
+            >
+              <Menu className="w-5 h-5 text-[#A1A1AA]" />
+            </button>
+            <div className="flex items-center gap-2 text-sm text-[#71717A] font-medium overflow-hidden whitespace-nowrap">
+              <span className="hidden sm:inline">Dashboard</span>
+              <span className="hidden sm:inline text-[#3F3F46] font-light">/</span>
+              <span className="text-white capitalize tracking-tight font-semibold">{currentView.replace('-', ' ')}</span>
+            </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 lg:gap-3">
              <button 
                 onClick={() => setCurrentView('saved')}
-                className="px-4 py-1.5 text-xs font-bold bg-[#111111] border border-[#27272A] rounded-lg hover:border-[#3F3F46] transition-colors"
+                className="hidden sm:block px-4 py-1.5 text-xs font-bold bg-[#111111] border border-[#27272A] rounded-lg hover:border-[#3F3F46] transition-colors"
              >
                 Saved Leads
              </button>
              <button 
                 onClick={exportLeads}
-                className="px-4 py-1.5 text-xs font-bold bg-white text-black rounded-lg hover:bg-[#E5E5E5] transition-colors"
+                className="px-3 lg:px-4 py-1.5 text-xs font-bold bg-white text-black rounded-lg hover:bg-[#E5E5E5] transition-colors"
              >
                 Export CSV
              </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-8 CustomScrollbar">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-8 CustomScrollbar">
           {currentView === 'dashboard' && (
             <div className="space-y-8 animate-in fade-in duration-700">
               {/* Stats Grid */}
