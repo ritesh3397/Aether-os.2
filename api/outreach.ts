@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getGenAI, handleOutreachGen } from '../src/lib/ai-logic';
+import { handleOutreachGen } from './_lib/ai-logic';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

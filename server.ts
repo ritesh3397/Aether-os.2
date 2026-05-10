@@ -2,7 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import dotenv from "dotenv";
-import { getGenAI, handleLeadGen, handleOutreachGen } from "./src/lib/ai-logic";
+import { handleLeadGen, handleOutreachGen } from "./api/_lib/ai-logic";
 
 dotenv.config();
 
