@@ -3,11 +3,24 @@ import { getUserStats, updateUserStats } from "./leadService";
 
 export const generateOutreach = async (lead: Lead): Promise<OutreachScripts> => {
   try {
-    const response = await fetch("/api/outreach", {
+    const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lead }),
+      body: JSON.stringify({ lead, task: 'outreach' }),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Server error response:", errorText);
+      throw new Error(`Server returned ${response.status}: ${errorText.slice(0, 100)}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await response.text();
+      console.error("Non-JSON response:", text);
+      throw new Error("Server returned an invalid response format (not JSON).");
+    }
 
     const data = await response.json();
 

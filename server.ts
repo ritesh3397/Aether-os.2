@@ -20,15 +20,8 @@ async function startServer() {
     return new GoogleGenAI(apiKey);
   };
 
-  // API Routes
-  app.post("/api/leads", async (req, res) => {
-    const { niche, location, count = 10 } = req.body;
-
-    try {
-      const ai = getGenAI();
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-      const systemPrompt = `You are an advanced lead generation AI system.
+  async function handleLeadGen(model: any, niche: string, location: string, count: number) {
+    const systemPrompt = `You are an advanced lead generation AI system.
 Your job is to generate HIGH-QUALITY, RELEVANT, and REALISTIC business leads.
 
 STRICT RULES:
@@ -75,51 +68,88 @@ RULES:
 
 OUTPUT ONLY VALID JSON.`;
 
-      const result = await model.generateContent(systemPrompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const cleanJson = text.replace(/```json|```/g, '').trim();
-      const data = JSON.parse(cleanJson);
-      
+    const result = await model.generateContent(systemPrompt);
+    const response = await result.response;
+    const text = response.text();
+    const cleanJson = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanJson);
+  }
+
+  async function handleOutreachGen(model: any, lead: any) {
+    const prompt = `Generate a high-conversion, professional outreach strategy for a business called "${lead.company}" in the "${lead.category}" niche based in ${lead.location}.
+Company Summary: ${lead.summary}
+
+Generate three distinct scripts in JSON format:
+{
+  "coldEmail": "subject and body",
+  "linkedinDm": "short personalized dm",
+  "shortPitch": "2-sentence elevator pitch"
+}
+
+Keep it professional, high-intent, and focused on value. Use placeholders like [Your Name].`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    const cleanJson = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanJson);
+  }
+
+  // API Routes
+  app.post("/api/chat", async (req, res) => {
+    const { niche, location, count = 10, task = 'leads', lead } = req.body;
+
+    try {
+      const ai = getGenAI();
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      if (task === 'leads') {
+        const data = await handleLeadGen(model, niche, location, count);
+        return res.json({ success: true, leads: data.leads });
+      } else if (task === 'outreach' && lead) {
+        const data = await handleOutreachGen(model, lead);
+        return res.json({ success: true, ...data });
+      } else {
+        return res.status(400).json({ success: false, error: "Invalid task or missing lead data" });
+      }
+    } catch (error: any) {
+      console.error("AI Error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Legacy endpoints (forward to /api/chat)
+  app.post("/api/leads", async (req, res) => {
+    req.body.task = 'leads';
+    // Manually trigger chat handler logic or just let it fall through
+    // For simplicity, we just keep the separate routes too but make them robust
+    const { niche, location, count = 10 } = req.body;
+    try {
+      const ai = getGenAI();
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      // ... same logic ...
+      // I'll just use a shared helper function for lead gen
+      const data = await handleLeadGen(model, niche, location, count);
       res.json({ success: true, leads: data.leads });
     } catch (error: any) {
-      console.error("Lead generation error:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });
 
   app.post("/api/outreach", async (req, res) => {
     const { lead } = req.body;
-
     try {
       const ai = getGenAI();
       const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-      const prompt = `Generate a high-conversion, professional outreach strategy for a business called "${lead.company}" in the "${lead.category}" niche based in ${lead.location}.
-  Company Summary: ${lead.summary}
-  
-  Generate three distinct scripts in JSON format:
-  {
-    "coldEmail": "subject and body",
-    "linkedinDm": "short personalized dm",
-    "shortPitch": "2-sentence elevator pitch"
-  }
-  
-  Keep it professional, high-intent, and focused on value. Use placeholders like [Your Name].`;
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const cleanJson = text.replace(/```json|```/g, '').trim();
-      const data = JSON.parse(cleanJson);
-      
+      const data = await handleOutreachGen(model, lead);
       res.json({ success: true, ...data });
     } catch (error: any) {
-      console.error("Outreach generation error:", error);
       res.status(500).json({ success: false, error: error.message });
     }
+  });
+
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ success: false, error: "API endpoint not found" });
   });
 
   // Vite integration
