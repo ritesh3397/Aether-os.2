@@ -1,57 +1,80 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
   Sparkles, 
   Bookmark, 
-  Download, 
   TrendingUp, 
   Search as SearchIcon,
-  Filter,
   RefreshCw,
-  Plus,
   Menu,
-  X
+  X,
+  CreditCard,
+  Zap
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { motion } from 'motion/react';
 import Sidebar from './components/Sidebar';
-import StatCard from './components/StatCard';
 import LeadTable from './components/LeadTable';
 import OutreachModal from './components/OutreachModal';
-import { Lead, OutreachScripts, View } from './types';
+import UpgradeModal from './components/UpgradeModal';
+import { Lead, OutreachScripts, View, UserStats } from './types';
+import { generateLeads, getUserStats, updateUserStats } from './services/leadService';
+import { generateOutreach } from './services/outreachService';
 import { cn } from './lib/utils';
-
-// Mock initial data
-const INITIAL_LEADS: Lead[] = [
-  { id: '1', name: 'FitFlow Gyms', niche: 'Fitness', location: 'Mumbai, MH', website: 'https://fitflow.in', email: 'hello@fitflow.in', linkedin: 'https://linkedin.com/company/fitflow', status: 'new', qualityScore: 94 },
-  { id: '2', name: 'TechSpire Solutions', niche: 'SaaS', location: 'Bangalore, KA', website: 'https://techspire.io', email: 'info@techspire.io', linkedin: 'https://linkedin.com/company/techspire', status: 'new', qualityScore: 88 },
-  { id: '3', name: 'GreenRoots Organic', niche: 'Retail', location: 'Pune, MH', website: 'https://greenroots.com', email: 'sales@greenroots.com', linkedin: 'https://linkedin.com/company/greenroots', status: 'new', qualityScore: 72 },
-  { id: '4', name: 'CloudScale Systems', niche: 'IT Services', location: 'Hyderabad, TS', website: 'https://cloudscale.tech', email: 'connect@cloudscale.tech', linkedin: 'https://linkedin.com/company/cloudscale', status: 'new', qualityScore: 91 },
-  { id: '5', name: 'DineDash Delivery', niche: 'Logistics', location: 'Delhi, DL', website: 'https://dinedash.app', email: 'biz@dinedash.app', linkedin: 'https://linkedin.com/company/dinedash', status: 'new', qualityScore: 65 },
-];
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
   const [searchQuery, setSearchQuery] = useState('');
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [savedLeads, setSavedLeads] = useState<Lead[]>([]);
+  const [stats, setStats] = useState<UserStats>(getUserStats());
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [outreachScripts, setOutreachScripts] = useState<OutreachScripts | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Initialize Gemini safely
-  const getGenAI = () => {
-    const apiKey = typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : (import.meta as any).env?.VITE_GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'undefined') {
-      throw new Error('Gemini API Key is missing. Please set GEMINI_API_KEY environment variable.');
+  useEffect(() => {
+    // Load saved leads from localStorage
+    const storedLeads = localStorage.getItem('aether_saved_leads');
+    if (storedLeads) setSavedLeads(JSON.parse(storedLeads));
+    
+    // Initial stats load
+    setStats(getUserStats());
+  }, []);
+
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    if (stats.remainingCredits <= 0 && !stats.isSubscribed) {
+      setIsUpgradeModalOpen(true);
+      return;
     }
-    return new GoogleGenAI({ apiKey });
+
+    setIsSearching(true);
+    setError(null);
+    setCurrentView('search');
+
+    try {
+      const result = await generateLeads(searchQuery, "Global Context", 10);
+      
+      if (result.success) {
+        setLeads(result.leads);
+        setStats(getUserStats()); 
+      } else {
+        if (result.error?.includes('credits')) {
+          setIsUpgradeModalOpen(true);
+        } else {
+          setError(result.error || "Search failed.");
+        }
+      }
+    } catch (err) {
+      setError("An unexpected error occurred.");
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleGenerateOutreach = async (lead: Lead) => {
@@ -60,77 +83,41 @@ export default function App() {
     setOutreachScripts(null);
 
     try {
-      const genAI = getGenAI();
-      const prompt = `Generate a high-conversion, professional outreach strategy for a business called "${lead.name}" in the "${lead.niche}" niche based in ${lead.location}.
-      Their website is ${lead.website}. 
-      
-      Provide 3 formats in JSON:
-      1. coldEmail (subject and body)
-      2. linkedinDm (short, conversational)
-      3. shortPitch (30-second elevator pitch)
-      
-      Format the response as raw JSON without markdown blocks:
-      {
-        "coldEmail": "...",
-        "linkedinDm": "...",
-        "shortPitch": "..."
-      }`;
-
-      const response = await genAI.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json"
-        }
-      });
-
-      const data = JSON.parse(response.text);
-      setOutreachScripts(data);
-    } catch (error) {
-      console.error('Error generating outreach:', error);
-      setOutreachScripts({
-        coldEmail: "Failed to generate. Please check your API key.",
-        linkedinDm: "Failed to generate.",
-        shortPitch: "Failed to generate."
-      });
+      const scripts = await generateOutreach(lead);
+      setOutreachScripts(scripts);
+      setStats(getUserStats());
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery) return;
-    
-    setIsSearching(true);
-    // Simulation of lead discovery
-    setTimeout(() => {
-        setIsSearching(false);
-        // Add one new mock lead based on search
-        const newLead: Lead = {
-            id: Math.random().toString(36).substr(2, 9),
-            name: searchQuery.split(' ')[0] + ' Partners',
-            niche: 'Research',
-            location: 'Remote',
-            website: `https://${searchQuery.replace(/\s+/g, '').toLowerCase()}.com`,
-            email: `contact@${searchQuery.replace(/\s+/g, '').toLowerCase()}.com`,
-            linkedin: 'https://linkedin.com',
-            status: 'new',
-            qualityScore: Math.floor(Math.random() * 30) + 70
-        };
-        setLeads([newLead, ...leads]);
-    }, 1500);
+  const saveLead = (lead: Lead) => {
+    const updated = [...savedLeads, lead];
+    setSavedLeads(updated);
+    localStorage.setItem('aether_saved_leads', JSON.stringify(updated));
+  };
+
+  const handleUpgrade = () => {
+    const updatedStats = { ...stats, isSubscribed: true, remainingCredits: 9999 };
+    updateUserStats(updatedStats);
+    setStats(updatedStats);
+    setIsUpgradeModalOpen(false);
   };
 
   const exportLeads = () => {
+    const dataToExport = currentView === 'saved' ? savedLeads : leads;
+    if (dataToExport.length === 0) return;
+
     const csvContent = "data:text/csv;charset=utf-8," 
-      + ["Name,Niche,Location,Website,Email,Score"].join(",") + "\n"
-      + leads.map(l => `${l.name},${l.niche},${l.location},${l.website},${l.email},${l.qualityScore}`).join("\n");
+      + "Company,Website,Email,Instagram,Location,Category\n"
+      + dataToExport.map(l => `"${l.company}","${l.website}","${l.email}","${l.instagram}","${l.location}","${l.category}"`).join("\n");
     
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "aetheros_leads_export.csv");
+    link.setAttribute("download", `aether_leads_${new Date().toLocaleDateString()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -164,18 +151,28 @@ export default function App() {
               <span className="text-white capitalize tracking-tight font-semibold">{currentView.replace('-', ' ')}</span>
             </div>
           </div>
-          <div className="flex gap-2 lg:gap-3">
-             <button 
-                onClick={() => setCurrentView('saved')}
-                className="hidden sm:block px-4 py-1.5 text-xs font-bold bg-[#111111] border border-[#27272A] rounded-lg hover:border-[#3F3F46] transition-colors"
-             >
-                Saved Leads
-             </button>
+          <div className="flex items-center gap-2 lg:gap-4">
+             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#111111] border border-[#27272A] rounded-lg">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-[#A1A1AA] uppercase tracking-wider">
+                  {stats.isSubscribed ? 'Pro Status' : `${stats.remainingCredits} Credits Left`}
+                </span>
+             </div>
+             
+             {!stats.isSubscribed && (
+               <button 
+                  onClick={() => setIsUpgradeModalOpen(true)}
+                  className="px-3 py-1.5 text-[10px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-all shadow-lg shadow-indigo-600/20"
+               >
+                  Upgrade
+               </button>
+             )}
+
              <button 
                 onClick={exportLeads}
                 className="px-3 lg:px-4 py-1.5 text-xs font-bold bg-white text-black rounded-lg hover:bg-[#E5E5E5] transition-colors"
              >
-                Export CSV
+                Export
              </button>
           </div>
         </header>
@@ -183,245 +180,231 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-8 CustomScrollbar">
           {currentView === 'dashboard' && (
             <div className="space-y-8 animate-in fade-in duration-700">
-              {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <StatCard label="Leads Found" value="12,481" icon={Users} trend="+12%" />
-                <StatCard label="Scripts Generated" value="983" icon={Sparkles} trend="92% Rank" />
-                <StatCard label="Conversion Rate" value="14.2%" icon={TrendingUp} trend="AI Optimized" />
+                <StatCard label="Leads Found" value={stats.totalLeadsFound.toLocaleString()} icon={Users} trend="+12%" />
+                <StatCard label="Credits Available" value={stats.isSubscribed ? '∞' : stats.remainingCredits.toString()} icon={Zap} trend={stats.isSubscribed ? 'unlimited' : 'free plan'} />
+                <StatCard label="Scripts Drafted" value={stats.totalScriptsGenerated.toString()} icon={Sparkles} trend="AI Powered" />
               </div>
 
-              {/* Advanced Search Controls */}
-              <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-1.5 rounded-2xl flex items-center shadow-2xl shadow-indigo-500/5 transition-all focus-within:border-brand-accent/50">
-                <form onSubmit={handleSearch} className="flex-1 flex items-center px-4 gap-3">
-                  <SearchIcon className="w-4 h-4 text-[#3F3F46]" />
-                  <input 
-                    type="text" 
-                    placeholder="Find gyms in Mumbai with over 4.5 stars..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-transparent border-none text-sm w-full focus:outline-none text-white placeholder:text-[#3F3F46]"
-                  />
-                </form>
-                <div className="w-[1px] h-8 bg-[#1A1A1A] mx-2"></div>
-                <div className="hidden md:flex items-center px-4 gap-2 text-xs font-bold text-[#71717A]">
-                  <span>Niche:</span>
-                  <span className="text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded-md border border-indigo-500/20">All Verticals</span>
-                </div>
-                <button 
-                  onClick={handleSearch}
-                  disabled={isSearching}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
-                >
-                  {isSearching ? 'Analyzing...' : 'Run AI Search'}
-                </button>
-              </div>
-
-              {/* Main Content Split */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                    <LeadTable 
-                        leads={leads} 
-                        onGenerateOutreach={handleGenerateOutreach}
-                        onSaveLead={(lead) => console.log('Saved', lead)}
+              {/* Main Search Bar */}
+              <div className="max-w-4xl mx-auto space-y-4">
+                <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-1.5 rounded-2xl flex items-center shadow-2xl focus-within:border-indigo-500/50 transition-all">
+                  <form onSubmit={handleSearch} className="flex-1 flex items-center px-4 gap-3">
+                    <SearchIcon className="w-4 h-4 text-[#3F3F46]" />
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Real estate agents in Seattle with high sales..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="bg-transparent border-none text-sm w-full focus:outline-none text-white placeholder:text-[#3F3F46]"
                     />
+                  </form>
+                  <button 
+                    onClick={handleSearch}
+                    disabled={isSearching}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 min-w-[140px] flex items-center justify-center gap-2"
+                  >
+                    {isSearching ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> Find 10 Leads</>}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-[#71717A]">Active Discovery</h3>
+                      <button onClick={() => setLeads([])} className="text-[10px] text-[#3F3F46] hover:text-[#71717A]">Clear Current List</button>
+                    </div>
+                    {isSearching ? (
+                      <div className="space-y-4">
+                        {[1, 2, 3].map(i => (
+                          <div key={i} className="h-20 bg-[#0D0D0D] border border-[#1A1A1A] rounded-2xl animate-pulse" />
+                        ))}
+                      </div>
+                    ) : (
+                      <LeadTable 
+                          leads={leads} 
+                          onGenerateOutreach={handleGenerateOutreach}
+                          onSaveLead={saveLead}
+                      />
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-6">
-                    {/* AI Sidebar Analysis */}
-                    <div className="bg-gradient-to-b from-[#0D0D0D] to-[#080808] border border-[#1A1A1A] rounded-2xl p-6 h-fit sticky top-20">
-                      <div className="flex items-center gap-2 mb-6 text-brand-accent">
+                    <div className="bg-gradient-to-b from-[#0D0D0D] to-[#080808] border border-[#1A1A1A] rounded-2xl p-6 h-fit">
+                      <div className="flex items-center gap-2 mb-6 text-indigo-400">
                         <Sparkles className="w-4 h-4" />
-                        <h3 className="text-sm font-bold uppercase tracking-widest">Aether Insight</h3>
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest">Aether Strategy</h3>
                       </div>
                       
-                      <div className="space-y-6">
-                        <div>
-                          <p className="text-[10px] uppercase text-[#71717A] tracking-widest font-bold mb-3">Best Outreach Angle</p>
-                          <div className="p-3 bg-[#111111] border border-indigo-500/10 rounded-xl">
-                            <p className="text-[11px] leading-relaxed text-[#D4D4D8] font-medium">
-                              Focus on <span className="text-indigo-300">automated check-in</span> features. Multi-location gyms are reporting up to 22% scalability issues this quarter.
-                            </p>
-                          </div>
+                      <div className="space-y-4 text-xs text-[#A1A1AA] leading-relaxed">
+                        <p>Currently analyzing <span className="text-white">high-growth sectors</span>. Retail and Real Estate are seeing significant movement in current quarters.</p>
+                        <div className="p-3 bg-[#111111] border border-[#1A1A1A] rounded-xl">
+                          <p className="text-[10px] text-[#71717A] italic">"AI-powered outreach is 3x more effective for mid-market B2B services right now."</p>
                         </div>
-
-                        <div>
-                          <p className="text-[10px] uppercase text-[#71717A] tracking-widest font-bold mb-3">AI Draft Snippet</p>
-                          <div className="p-3 bg-[#111111] border border-[#1A1A1A] rounded-xl relative overflow-hidden group">
-                            <div className="text-[10px] text-[#52525B] leading-relaxed font-mono">
-                              Subject: Scaling your Mumbai operations...<br/><br/>
-                              Hi team, noticed you're expanding. We've helped regional gyms reduce operational friction by...
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-transparent to-transparent opacity-60"></div>
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button className="bg-indigo-600 text-[10px] font-bold px-3 py-1 rounded-md text-white shadow-lg">View Full</button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <button className="w-full py-2.5 bg-brand-accent hover:brightness-110 text-white rounded-xl text-[11px] font-bold shadow-lg shadow-indigo-600/10 transition-all">
-                          Personalize Campaign
+                        <button 
+                          onClick={() => setIsUpgradeModalOpen(true)}
+                          className="w-full py-2.5 bg-[#161618] border border-[#27272A] hover:border-indigo-500/50 text-white rounded-xl text-[10px] font-bold transition-all mt-4"
+                        >
+                          Deep Scan Industry
                         </button>
                       </div>
+                    </div>
+
+                    <div className="bg-[#0D0D0D] border border-[#1A1A1A] rounded-2xl p-6">
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717A] mb-4">Saved Leads</h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-2xl font-bold text-white tracking-tight">{savedLeads.length}</span>
+                        <Bookmark className="w-4 h-4 text-indigo-400" />
+                      </div>
+                      <button onClick={() => setCurrentView('saved')} className="text-[10px] text-indigo-400 hover:underline">View my collection →</button>
                     </div>
                 </div>
               </div>
             </div>
           )}
 
-        {currentView === 'saved' && (
-          <div className="space-y-6">
-            <h3 className="text-xl font-display font-bold tracking-tight mb-1">Bookmarked Prospects</h3>
-            <p className="text-sm text-zinc-500 font-medium">Leads you've identified for follow-up</p>
-            <LeadTable 
-                leads={leads.slice(0, 2)} 
-                onGenerateOutreach={handleGenerateOutreach}
-                onSaveLead={(lead) => console.log('Removed from saved', lead)}
-            />
-          </div>
-        )}
-
-        {currentView === 'billing' && (
-          <div className="max-w-4xl mx-auto py-10">
-            <div className="text-center mb-12">
-                <h2 className="text-4xl font-display font-bold mb-4 tracking-tight">Scale your outreach</h2>
-                <p className="text-zinc-500 font-medium max-w-lg mx-auto text-lg">Choose the perfect plan for your sales team and start closing more deals today.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-sans">
-                {/* Pro Plan */}
-                <div className="glass-card p-8 rounded-[2rem] border-brand-accent/50 relative">
-                    <div className="absolute top-0 right-0 p-6">
-                        <span className="bg-brand-accent text-white text-[10px] font-bold px-3 py-1 rounded-full glow-accent">CURRENT PLAN</span>
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">Pro Plan</h3>
-                    <div className="flex items-baseline gap-1 mb-6">
-                        <span className="text-4xl font-bold">$49</span>
-                        <span className="text-zinc-500 font-medium">/month</span>
-                    </div>
-                    <ul className="space-y-4 mb-10">
-                        {[
-                            '1,000 lead searches / mo',
-                            'AI outreach generation',
-                            'LinkedIn integration',
-                            'Team collaboration',
-                            'Priority support'
-                        ].map((feat, i) => (
-                            <li key={i} className="flex items-center gap-3 text-sm text-zinc-300 font-medium">
-                                <Sparkles className="w-4 h-4 text-brand-accent" />
-                                {feat}
-                            </li>
-                        ))}
-                    </ul>
-                    <button className="w-full py-3 bg-zinc-800 rounded-xl font-bold text-sm text-zinc-400 cursor-not-allowed">Active</button>
-                </div>
-
-                {/* Enterprise Plan */}
-                <div className="bg-zinc-100 p-8 rounded-[2rem] text-zinc-900 shadow-2xl scale-105">
-                    <h3 className="text-xl font-bold mb-2">Enterprise</h3>
-                    <div className="flex items-baseline gap-1 mb-6">
-                        <span className="text-4xl font-bold">$199</span>
-                        <span className="text-zinc-500 font-medium">/month</span>
-                    </div>
-                    <ul className="space-y-4 mb-10">
-                        {[
-                            'Unlimited searches',
-                            'Custom AI models',
-                            'API access',
-                            'Dedicated account manager',
-                            'White-label reports'
-                        ].map((feat, i) => (
-                            <li key={i} className="flex items-center gap-3 text-sm font-semibold">
-                                <Sparkles className="w-4 h-4 text-brand-accent fill-brand-accent" />
-                                {feat}
-                            </li>
-                        ))}
-                    </ul>
-                    <button className="w-full py-3 bg-brand-accent text-white rounded-xl font-bold text-sm shadow-xl hover:brightness-110 transition-all glow-accent">Upgrade Now</button>
-                </div>
-            </div>
-          </div>
-        )}
-
-        {currentView === 'search' && (
-            <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
-                <div className="bg-[#0D0D0D] p-12 rounded-[2.5rem] border border-brand-border text-center max-w-3xl mx-auto bg-gradient-to-b from-brand-accent/5 to-transparent relative overflow-hidden">
-                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-brand-accent/10 blur-[100px] pointer-events-none" />
-                     
-                     <div className="w-16 h-16 bg-brand-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-brand-accent/20">
-                        <SearchIcon className="w-6 h-6 text-brand-accent" />
-                     </div>
-                     <h2 className="text-3xl font-display font-bold mb-4 tracking-tight text-white">Discover high-intent prospects</h2>
-                     <p className="text-[#71717A] font-medium mb-10 max-w-md mx-auto text-sm">Target business leads based on vertical, location, and intent signals identified by Aether AI.</p>
-                     
-                     <form onSubmit={handleSearch} className="max-w-lg mx-auto relative group">
-                        <div className="relative flex gap-2">
-                             <input 
-                                type="text" 
-                                placeholder="e.g. SaaS companies in London"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="flex-1 bg-zinc-950 border border-brand-border rounded-xl px-5 py-3.5 text-sm font-medium focus:outline-none focus:border-brand-accent transition-all placeholder:text-[#3F3F46] text-white"
-                            />
-                            <button 
-                                type="submit"
-                                disabled={isSearching}
-                                className="bg-indigo-600 text-white px-6 py-3.5 rounded-xl font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-500 transition-all flex items-center justify-center min-w-[100px] text-sm"
-                            >
-                                {isSearching ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : 'Run search'}
-                            </button>
-                        </div>
-                     </form>
-                </div>
-                
-                {leads.length > INITIAL_LEADS.length && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
+          {currentView === 'search' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                 <button 
+                  onClick={() => setCurrentView('dashboard')}
+                  className="text-xs text-[#71717A] hover:text-white transition-colors"
+                 >
+                   ← Back to dashboard
+                 </button>
+                 <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="Refine search..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="bg-[#0D0D0D] border border-[#1A1A1A] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500/50 w-48"
+                    />
+                    <button 
+                      onClick={handleSearch}
+                      disabled={isSearching}
+                      className="p-1.5 bg-indigo-600 rounded-lg text-white disabled:opacity-50"
                     >
-                        <h4 className="text-sm font-bold uppercase tracking-widest text-[#71717A]">Most Recent Candidates</h4>
-                        <LeadTable leads={leads.filter(l => !INITIAL_LEADS.find(il => il.id === l.id))} onGenerateOutreach={handleGenerateOutreach} onSaveLead={() => {}} />
-                    </motion.div>
+                      <RefreshCw className={cn("w-4 h-4", isSearching && "animate-spin")} />
+                    </button>
+                 </div>
+              </div>
+              
+              {error && (
+                <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-xl text-rose-400 text-xs flex items-center gap-3">
+                  <X className="w-4 h-4" />
+                  {error}
+                </div>
+              )}
+
+              {isSearching ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="h-24 bg-[#0D0D0D] border border-[#1A1A1A] rounded-2xl animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <LeadTable 
+                  leads={leads} 
+                  onGenerateOutreach={handleGenerateOutreach}
+                  onSaveLead={saveLead}
+                />
+              )}
+            </div>
+          )}
+
+          {currentView === 'saved' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-white tracking-tight">Saved Collection</h2>
+                <div className="flex items-center gap-2">
+                   <button 
+                    onClick={() => {
+                       localStorage.removeItem('aether_saved_leads');
+                       setSavedLeads([]);
+                    }}
+                    className="text-[10px] text-rose-400 hover:underline"
+                   >
+                     Clear all
+                   </button>
+                </div>
+              </div>
+              <LeadTable 
+                leads={savedLeads} 
+                onGenerateOutreach={handleGenerateOutreach}
+                onSaveLead={() => {}}
+              />
+            </div>
+          )}
+
+          {(currentView === 'settings' || currentView === 'billing') && (
+            <div className="max-w-2xl mx-auto py-12 text-center space-y-6">
+                <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
+                  <CreditCard className="w-8 h-8 text-indigo-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Billing & Plan</h2>
+                <p className="text-sm text-[#71717A]">
+                  Account Status: <span className="text-white font-bold">{stats.isSubscribed ? 'PRO SUBSCRIBER' : 'FREE EXPLORER'}</span>
+                </p>
+                {!stats.isSubscribed ? (
+                  <button 
+                    onClick={() => setIsUpgradeModalOpen(true)}
+                    className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 transition-all font-sans"
+                  >
+                    Unlock Pro Access
+                  </button>
+                ) : (
+                  <div className="p-6 bg-[#0D0D0D] border border-[#1A1A1A] rounded-2xl text-[#E5E5E5] space-y-4">
+                    <p className="text-sm">You have unlimited leads and priority AI infrastructure access.</p>
+                    <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-bold">
+                      <TrendingUp className="w-4 h-4" />
+                      Subscription active via Aether Pay
+                    </div>
+                  </div>
                 )}
             </div>
-        )}
-
-        {currentView === 'settings' && (
-          <div className="max-w-2xl space-y-8">
-            <h3 className="text-xl font-display font-bold tracking-tight mb-1">Account & Preference</h3>
-            <div className="glass-card p-6 rounded-2xl space-y-6">
-                <div className="flex justify-between items-center pb-6 border-b border-brand-border">
-                    <div>
-                        <div className="font-semibold">AI Generation Style</div>
-                        <div className="text-xs text-zinc-500">Choose the tone for your outreach outputs</div>
-                    </div>
-                    <select className="bg-zinc-900 border border-brand-border rounded-lg px-3 py-1.5 text-sm text-zinc-300">
-                        <option>Authoritative & Bold</option>
-                        <option>Friendly & Conversational</option>
-                        <option>Minimalist & Sharp</option>
-                    </select>
-                </div>
-                <div className="flex justify-between items-center pb-6 border-b border-brand-border">
-                    <div>
-                        <div className="font-semibold">Personalized Signature</div>
-                        <div className="text-xs text-zinc-500">Append this to every AI draft</div>
-                    </div>
-                    <button className="text-sm text-brand-accent font-bold">Edit Signature</button>
-                </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </main>
+          )}
+        </div>
+      </main>
 
       <OutreachModal 
         lead={selectedLead}
         scripts={outreachScripts}
-        isLoading={isGenerating}
-        onClose={() => {
-            setSelectedLead(null);
-            setOutreachScripts(null);
-        }}
+        isOpen={selectedLead !== null}
+        isGenerating={isGenerating}
+        onClose={() => setSelectedLead(null)}
       />
+
+      <UpgradeModal 
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onUpgrade={handleUpgrade}
+      />
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, trend }: { label: string, value: string, icon: any, trend?: string }) {
+  return (
+    <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6 rounded-2xl hover:border-[#27272A] transition-all group">
+      <div className="flex justify-between items-start mb-4">
+        <div className="p-2.5 bg-[#161618] rounded-xl border border-[#27272A] group-hover:border-indigo-500/50 transition-colors">
+          <Icon className="w-5 h-5 text-[#A1A1AA] group-hover:text-indigo-400 transition-colors" />
+        </div>
+        {trend && (
+          <span className={cn(
+            "text-[10px] font-bold px-2 py-0.5 rounded-md font-sans",
+            trend.startsWith('+') ? "bg-emerald-500/10 text-emerald-500" : "bg-indigo-500/10 text-indigo-400"
+          )}>
+            {trend}
+          </span>
+        )}
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-white tracking-tight mb-1">{value}</p>
+        <p className="text-xs font-medium text-[#71717A] uppercase tracking-widest">{label}</p>
+      </div>
     </div>
   );
 }

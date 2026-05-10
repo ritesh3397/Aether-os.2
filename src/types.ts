@@ -1,13 +1,20 @@
 export interface Lead {
   id: string;
-  name: string;
-  niche: string;
-  location: string;
+  company: string;
   website: string;
   email: string;
-  linkedin: string;
-  status: 'new' | 'contacted' | 'interested' | 'rejected';
+  instagram: string;
+  location: string;
+  category: string;
+  summary: string;
   qualityScore: number;
+}
+
+export interface UserStats {
+  remainingCredits: number;
+  totalLeadsFound: number;
+  isSubscribed: boolean;
+  totalScriptsGenerated: number;
 }
 
 export interface OutreachScripts {

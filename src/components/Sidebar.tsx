@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { LayoutDashboard, Search, Bookmark, Settings, CreditCard, LogOut, Zap, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { View } from '@/src/types';
+import { View, UserStats } from '@/src/types';
+import { getUserStats } from '../services/leadService';
+import { motion } from 'motion/react';
 
 interface SidebarProps {
   currentView: View;
@@ -11,6 +13,15 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: SidebarProps) {
+  const [stats, setStats] = useState<UserStats | null>(null);
+
+  useEffect(() => {
+    const loadStats = () => setStats(getUserStats());
+    loadStats();
+    const interval = setInterval(loadStats, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const menuItems = [
     { id: 'dashboard' as View, icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'search' as View, icon: Search, label: 'Lead Search' },
@@ -18,6 +29,8 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
     { id: 'billing' as View, icon: CreditCard, label: 'Subscription' },
     { id: 'settings' as View, icon: Settings, label: 'Settings' },
   ];
+
+  const creditPercentage = stats ? (stats.remainingCredits / 50) * 100 : 0;
 
   return (
     <>
@@ -63,23 +76,30 @@ export default function Sidebar({ currentView, onViewChange, isOpen, onClose }: 
           </nav>
         </div>
 
-        <div className="mt-auto p-6 border-t border-brand-border">
+        <div className="mt-auto p-6 border-t border-brand-border font-sans">
           <div className="mb-6">
             <div className="flex justify-between text-[10px] uppercase tracking-wider text-[#71717A] mb-2 font-bold">
-              <span>Credits Used</span>
-              <span className="hidden sm:inline">1,284 / 5,000</span>
-              <span className="sm:hidden">1.2k/5k</span>
+              <span>{stats?.isSubscribed ? 'Unlimited' : 'Credits'}</span>
+              <span>{stats?.isSubscribed ? 'PRO' : `${stats?.remainingCredits || 0} / 50`}</span>
             </div>
             <div className="w-full h-1 bg-[#1A1A1A] rounded-full overflow-hidden">
-              <div className="h-full bg-indigo-500 w-[25.6%]" />
+              <motion.div 
+                animate={{ width: `${stats?.isSubscribed ? 100 : creditPercentage}%` }}
+                className={cn(
+                  "h-full transition-all",
+                  (stats?.remainingCredits || 0) < 10 && !stats?.isSubscribed ? "bg-amber-500" : "bg-indigo-500"
+                )} 
+              />
             </div>
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 shadow-sm" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white shadow-lg">
+              {stats?.totalLeadsFound || 0}
+            </div>
             <div className="text-[11px]">
               <p className="font-semibold text-white">Founder Account</p>
-              <p className="text-[#71717A]">Pro Plan</p>
+              <p className="text-[#71717A]">{stats?.isSubscribed ? 'Pro Plan' : 'Free Plan'}</p>
             </div>
           </div>
         </div>
