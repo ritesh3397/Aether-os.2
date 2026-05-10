@@ -9,8 +9,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { niche, location, count = 10 } = req.body;
 
   try {
-    const ai = getGenAI();
-    const data = await handleLeadGen(ai, niche, location, count);
+    const data = await handleLeadGen(niche, location, count);
     return res.status(200).json({ success: true, leads: data.leads });
   } catch (error: any) {
     console.error("Vercel Leads Error:", error);

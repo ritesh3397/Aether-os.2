@@ -17,13 +17,11 @@ async function startServer() {
     const { niche, location, count = 10, task = 'leads', lead } = req.body;
 
     try {
-      const ai = getGenAI();
-
       if (task === 'leads') {
-        const data = await handleLeadGen(ai, niche, location, count);
+        const data = await handleLeadGen(niche, location, count);
         return res.json({ success: true, leads: data.leads });
       } else if (task === 'outreach' && lead) {
-        const data = await handleOutreachGen(ai, lead);
+        const data = await handleOutreachGen(lead);
         return res.json({ success: true, ...data });
       } else {
         return res.status(400).json({ success: false, error: "Invalid task or missing lead data" });
@@ -37,12 +35,9 @@ async function startServer() {
   // Legacy endpoints (forward to /api/chat)
   app.post("/api/leads", async (req, res) => {
     req.body.task = 'leads';
-    // Manually trigger chat handler logic or just let it fall through
-    // For simplicity, we just keep the separate routes too but make them robust
     const { niche, location, count = 10 } = req.body;
     try {
-      const ai = getGenAI();
-      const data = await handleLeadGen(ai, niche, location, count);
+      const data = await handleLeadGen(niche, location, count);
       res.json({ success: true, leads: data.leads });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
@@ -52,8 +47,7 @@ async function startServer() {
   app.post("/api/outreach", async (req, res) => {
     const { lead } = req.body;
     try {
-      const ai = getGenAI();
-      const data = await handleOutreachGen(ai, lead);
+      const data = await handleOutreachGen(lead);
       res.json({ success: true, ...data });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
