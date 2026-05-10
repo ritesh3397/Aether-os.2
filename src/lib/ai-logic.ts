@@ -56,12 +56,10 @@ RULES:
 
 OUTPUT ONLY VALID JSON.`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: systemPrompt,
-  });
-
-  const text = response.text;
+  const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const result = await model.generateContent(systemPrompt);
+  const text = result.response.text();
+  
   if (!text) throw new Error("No response from AI");
   const cleanJson = text.replace(/```json|```/g, '').trim();
   return JSON.parse(cleanJson);
@@ -80,12 +78,10 @@ Generate three distinct scripts in JSON format:
 
 Keep it professional, high-intent, and focused on value. Use placeholders like [Your Name].`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-  });
-
-  const text = response.text;
+  const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
+  
   if (!text) throw new Error("No response from AI");
   const cleanJson = text.replace(/```json|```/g, '').trim();
   return JSON.parse(cleanJson);
