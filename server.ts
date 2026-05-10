@@ -2,9 +2,67 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import dotenv from "dotenv";
-import { handleLeadGen, handleOutreachGen } from "./api/_lib/ai-logic";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
+
+// AI Logic Inlined
+async function handleAIRequest(prompt: string, isJson: boolean = true) {
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+
+  if (openRouterKey) {
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openRouterKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.0-flash-001",
+          messages: [{ role: "user", content: prompt }],
+          response_format: isJson ? { type: "json_object" } : undefined
+        })
+      });
+
+      if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`);
+      const data = await response.json();
+      const text = data.choices?.[0]?.message?.content;
+      if (!text) throw new Error("Empty response from OpenRouter");
+      return isJson ? JSON.parse(text.replace(/```json|```/g, '').trim()) : text;
+    } catch (error: any) {
+      if (!geminiKey) throw error;
+    }
+  }
+
+  if (geminiKey) {
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: { responseMimeType: isJson ? "application/json" : "text/plain" }
+      });
+      const text = response.text;
+      if (!text) throw new Error("No response from Gemini");
+      return isJson ? JSON.parse(text.replace(/```json|```/g, '').trim()) : text;
+    } catch (error: any) { throw error; }
+  }
+  throw new Error("Missing API Keys");
+}
+
+async function handleLeadGen(niche: string, location: string, count: number) {
+  const prompt = `Generate ${count} real-sounding leads for "${niche}" in "${location}".
+  JSON Format: { "leads": [{ "company": "", "website": "", "email": "", "location": "${location}", "category": "${niche}", "summary": "" }] }`;
+  return await handleAIRequest(prompt, true);
+}
+
+async function handleOutreachGen(lead: any) {
+  const prompt = `Generate outreach for ${lead.company} (${lead.category}) in ${lead.location}.
+  JSON: { "coldEmail": "", "linkedinDm": "", "shortPitch": "" }`;
+  return await handleAIRequest(prompt, true);
+}
 
 async function startServer() {
   const app = express();
