@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, Sparkles } from 'lucide-react';
+import { X, Copy, Check, Sparkles, Wand2, Terminal, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { OutreachScripts, Lead } from '@/src/types';
-import { cn } from '@/src/lib/utils';
+import { OutreachScripts, Lead } from '../types';
+import { cn } from '../lib/utils';
 
 interface OutreachModalProps {
   lead: Lead | null;
@@ -36,46 +36,59 @@ export default function OutreachModal({ lead, scripts, isOpen, isGenerating, onC
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050505]/95 backdrop-blur-md">
         <motion.div
-          initial={{ opacity: 0, scale: 0.98, y: 10 }}
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           exit={{ opacity: 0 }}
+           onClick={onClose}
+           className="absolute inset-0"
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 40 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.98, y: 10 }}
-          className="w-full max-w-xl bg-[#080808] border border-[#1A1A1A] rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+          exit={{ opacity: 0, scale: 0.9, y: 40 }}
+          className="relative w-full max-w-2xl glass-card !bg-brand-surface shadow-[0_0_80px_-20px_rgba(45,91,255,0.2)] overflow-hidden"
         >
-          <div className="p-6 border-b border-[#1A1A1A] flex justify-between items-center bg-[#0D0D0D]">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center border border-indigo-500/20">
-                <Sparkles className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-base text-white">{lead?.company || 'AI Discovery'}</h3>
-                <p className="text-[10px] text-[#71717A] uppercase tracking-wider font-bold">Personalized Outreach Engine</p>
-              </div>
-            </div>
-            <button 
+          {/* Header */}
+          <div className="p-8 border-b border-white/5 flex justify-between items-center relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-accent/5 blur-3xl pointer-events-none" />
+             <div className="flex items-center gap-4 relative z-10">
+                <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 group">
+                   <Wand2 className="w-5 h-5 text-brand-accent group-hover:rotate-12 transition-transform" />
+                </div>
+                <div>
+                   <h3 className="font-display font-bold text-xl text-white tracking-tight">{lead?.company || 'AI Drafting Agent'}</h3>
+                   <div className="flex items-center gap-2 mt-0.5">
+                      <Terminal className="w-3 h-3 text-text-secondary" />
+                      <span className="text-[10px] text-text-secondary uppercase tracking-[0.2em] font-black">Strategic_Payload_Generator</span>
+                   </div>
+                </div>
+             </div>
+             <button 
                 onClick={onClose}
-                className="p-1.5 hover:bg-white/5 rounded-full transition-colors text-[#71717A] hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
+                className="p-2.5 hover:bg-white/5 rounded-xl transition-all text-text-secondary hover:text-white border border-transparent hover:border-white/10"
+             >
+               <X className="w-5 h-5" />
+             </button>
           </div>
 
-          <div className="p-6 space-y-6">
-            <div className="flex gap-2 p-1 bg-[#111111] border border-[#1A1A1A] rounded-xl w-fit">
+          {/* Controls */}
+          <div className="p-8 space-y-8">
+            <div className="flex flex-wrap gap-2 p-1.5 bg-white/[0.03] border border-white/5 rounded-2xl w-fit">
               {[
-                { id: 'email', label: 'Cold Email' },
-                { id: 'linkedin', label: 'LinkedIn DM' },
-                { id: 'pitch', label: 'Elevator Pitch' }
+                { id: 'email', label: 'Synthetic Email' },
+                { id: 'linkedin', label: 'Tactical DM' },
+                { id: 'pitch', label: 'Elevator Flash' }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={cn(
-                    "px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200 uppercase tracking-tight",
+                    "px-6 py-2.5 rounded-xl text-[10px] font-black transition-all duration-300 uppercase tracking-widest",
                     activeTab === tab.id 
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" 
-                      : "text-[#71717A] hover:text-[#A1A1AA]"
+                      ? "bg-brand-accent text-white glow-accent shadow-xl active:scale-95" 
+                      : "text-text-secondary hover:text-white hover:bg-white/5"
                   )}
                 >
                   {tab.label}
@@ -83,23 +96,27 @@ export default function OutreachModal({ lead, scripts, isOpen, isGenerating, onC
               ))}
             </div>
 
-            <div className="relative group min-h-[200px]">
-              <div className="relative h-full p-6 bg-[#0D0D0D] rounded-2xl border border-[#1A1A1A] text-xs leading-relaxed text-[#A1A1AA] font-sans">
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-linear-to-r from-brand-accent/20 to-accent-secondary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-1000" />
+              <div className="relative min-h-[300px] p-8 glass-card border-white/10 text-sm leading-relaxed text-text-secondary font-medium font-mono CustomScrollbar max-h-[400px] overflow-y-auto">
                 {isGenerating ? (
-                  <div className="flex flex-col items-center justify-center h-[160px] gap-4">
-                     <div className="relative w-10 h-10">
+                  <div className="flex flex-col items-center justify-center h-[240px] gap-6">
+                     <div className="relative w-16 h-16">
                         <motion.div 
                           animate={{ rotate: 360 }}
-                          transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                          className="absolute inset-0 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full"
+                          transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+                          className="absolute inset-0 border-3 border-brand-accent/10 border-t-brand-accent rounded-full"
                         />
-                        <Sparkles className="absolute inset-0 m-auto w-4 h-4 text-indigo-400 animate-pulse" />
+                        <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-brand-accent animate-float" />
                      </div>
-                     <span className="text-indigo-400 text-[10px] font-bold uppercase tracking-widest animate-pulse">Forging Strategy...</span>
+                     <div className="space-y-2 text-center">
+                        <p className="text-white text-xs font-black uppercase tracking-[0.4em] animate-pulse">Forging Outreach Layer</p>
+                        <p className="text-[10px] text-text-secondary/60 animate-pulse">Synchronizing with target context...</p>
+                     </div>
                   </div>
                 ) : (
-                  <div className="whitespace-pre-wrap">
-                    {getActiveContent() || "No content generated yet."}
+                  <div className="whitespace-pre-wrap selection:bg-brand-accent/30 selection:text-white">
+                    {getActiveContent() || "Intelligence buffer empty. Re-initialize generation."}
                   </div>
                 )}
               </div>
@@ -109,37 +126,41 @@ export default function OutreachModal({ lead, scripts, isOpen, isGenerating, onC
                   <button 
                     onClick={() => handleCopy(getActiveContent())}
                     className={cn(
-                        "p-2 rounded-lg transition-all border",
-                        copied ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-[#111111] border-[#1A1A1A] text-[#71717A] hover:text-white"
+                        "p-3 rounded-xl transition-all border shadow-2xl",
+                        copied ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-white/5 border-white/10 text-text-secondary hover:text-white hover:scale-110 active:scale-90"
                     )}
                   >
-                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="flex justify-between items-center pt-2">
-               <div className="flex -space-x-2">
-                 {[1,2,3].map(i => (
-                    <div key={i} className="w-6 h-6 rounded-full border border-[#080808] bg-zinc-800" />
-                 ))}
-                 <div className="pl-4 text-[10px] text-[#71717A] font-medium flex items-center">Verified by Aether AI</div>
+            <div className="flex flex-col sm:flex-row gap-6 justify-between items-center pt-4">
+               <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2 px-3 py-1.5 glass-card bg-white/5 border-white/5 rounded-lg">
+                    <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[9px] text-text-secondary font-black uppercase tracking-widest">Context_Safe</span>
+                  </div>
+                  <div className="text-[10px] text-text-secondary font-bold flex items-center gap-2">
+                     <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
+                     Aether AI Analysis Complete
+                  </div>
                </div>
-               <div className="flex gap-3">
+               <div className="flex gap-4 w-full sm:w-auto">
                  <button 
                   onClick={onClose}
-                  className="px-5 py-2 rounded-xl text-xs font-bold text-[#71717A] hover:text-[#A1A1AA] transition-colors"
+                  className="flex-1 sm:flex-none px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary hover:text-white transition-all"
                  >
-                  Dismiss
+                  Deactivate
                  </button>
                  <button 
                   disabled={isGenerating || !scripts}
                   onClick={() => handleCopy(getActiveContent())}
-                  className="bg-white text-black px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-[#E5E5E5] disabled:opacity-50 transition-all flex items-center gap-2"
+                  className="flex-1 sm:flex-none bg-white text-black px-10 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-3 shadow-2xl"
                  >
-                  <Copy className="w-3.5 h-3.5" />
-                  Copy Script
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Copied' : 'Extract Script'}
                  </button>
                </div>
             </div>

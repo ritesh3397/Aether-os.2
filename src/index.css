@@ -1,31 +1,65 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", sans-serif;
+  --font-display: "Plus Jakarta Sans", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
   --color-brand-bg: #050505;
-  --color-brand-card: #0D0D0D;
-  --color-brand-border: #1A1A1A;
-  --color-brand-accent: #6366f1;
-  --color-brand-muted: #71717a;
+  --color-brand-surface: #0a0a0a;
+  --color-brand-card: #0d0d0d;
+  --color-brand-border: rgba(255, 255, 255, 0.08);
+  --color-brand-accent: #2D5BFF;
+  --color-accent-secondary: #8B5CF6;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #94A3B8;
 }
 
 @layer base {
   body {
-    @apply bg-brand-bg text-[#E5E5E5] font-sans antialiased;
+    @apply bg-brand-bg text-text-primary font-sans antialiased selection:bg-brand-accent/30;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-brand-card border border-brand-border;
+    @apply bg-brand-surface/40 backdrop-blur-[12px] border border-brand-border saturate-[180%] rounded-2xl;
   }
   
   .glow-accent {
-    @apply shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)];
+    @apply shadow-[0_0_30px_-10px_rgba(45,91,255,0.4)];
   }
+
+  .glow-violet {
+    @apply shadow-[0_0_30px_-10px_rgba(139,92,246,0.4)];
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-linear-to-b from-white to-[#94A3B8];
+  }
+
+  .hero-mask {
+    mask-image: radial-gradient(circle at center, black, transparent 80%);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-white/20;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
 

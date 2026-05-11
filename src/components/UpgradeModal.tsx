@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Zap, Star, Shield } from 'lucide-react';
+import { X, Check, Zap, Star, Shield, Layers, Sparkles } from 'lucide-react';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -18,68 +18,78 @@ export default function UpgradeModal({ isOpen, onClose, onUpgrade }: UpgradeModa
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-[#050505]/90 backdrop-blur-md"
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.9, y: 40 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-lg bg-[#0F0F0F] border border-[#27272A] rounded-3xl overflow-hidden shadow-2xl"
+            exit={{ opacity: 0, scale: 0.9, y: 40 }}
+            className="relative w-full max-w-xl glass-card !bg-brand-surface border-white/10 shadow-[0_0_100px_-20px_rgba(139,92,246,0.3)] overflow-hidden"
           >
-            <div className="absolute top-4 right-4 z-10">
+            {/* Header with glow */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-accent-secondary/10 rounded-full blur-[100px] pointer-events-none" />
+            
+            <div className="absolute top-6 right-6 z-20">
               <button 
                 onClick={onClose}
-                className="p-2 hover:bg-white/5 rounded-full text-[#71717A] hover:text-white transition-colors"
+                className="p-2.5 hover:bg-white/5 rounded-xl text-text-secondary hover:text-white transition-all border border-transparent hover:border-white/10"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center border border-indigo-500/20">
-                  <Zap className="w-5 h-5 text-indigo-400" />
+            <div className="p-10 relative z-10">
+              <div className="flex flex-col items-center text-center gap-6 mb-12">
+                <div className="w-16 h-16 bg-accent-secondary/10 rounded-2xl flex items-center justify-center border border-accent-secondary/20 glow-violet rotate-6">
+                  <Star className="w-8 h-8 text-accent-secondary" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">Upgrade to Pro</h2>
-                  <p className="text-sm text-[#71717A]">Scale your lead generation efforts</p>
+                <div className="space-y-3">
+                  <h2 className="text-4xl font-display font-extrabold text-white tracking-tight leading-tight">Expansion Protocol</h2>
+                  <p className="text-text-secondary text-sm font-medium max-w-sm">Evolve your outreach system with unbounded computational power.</p>
                 </div>
               </div>
 
-              <div className="space-y-4 mb-8">
+              <div className="grid grid-cols-1 gap-4 mb-10">
                 {[
-                  "Unlimited high-intent leads",
-                  "AI Search Grounding with Maps",
-                  "Advanced personalization engine",
-                  "Bulk CSV Export",
-                  "Priority support"
+                  { icon: Zap, label: "Unlimited Lead Extraction", desc: "No daily credit lockdowns" },
+                  { icon: Layers, label: "Deep Core Intelligence", desc: "Access to advanced Reasoning models" },
+                  { icon: Shield, label: "Priority Infrastructure", desc: "Server bypass during peak hours" },
+                  { icon: Sparkles, label: "Strategic Exports", desc: "Unlock unlimited CSV buffer" }
                 ].map((feature, i) => (
-                  <div key={i} className="flex items-center gap-3 text-sm text-[#E5E5E5]">
-                    <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center">
-                      <Check className="w-3 h-3 text-green-400" />
+                  <div key={i} className="flex items-center gap-5 p-4 glass-card bg-white/[0.03] border-white/5 hover:border-accent-secondary/20 transition-all group">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-white group-hover:text-accent-secondary transition-colors">
+                      <feature.icon className="w-5 h-5" />
                     </div>
-                    {feature}
+                    <div>
+                       <p className="text-[11px] font-black uppercase tracking-widest text-white">{feature.label}</p>
+                       <p className="text-[10px] text-text-secondary font-medium">{feature.desc}</p>
+                    </div>
                   </div>
                 ))}
               </div>
 
-              <div className="bg-[#161618] border border-[#27272A] rounded-2xl p-6 mb-8">
-                <div className="flex justify-between items-end mb-4">
+              <div className="glass-card p-8 bg-white/[0.02] border-white/10 mb-10 relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-[2px] bg-linear-to-r from-accent-secondary to-brand-accent group-hover:scale-x-110 transition-transform duration-700" />
+                <div className="flex justify-between items-end">
                   <div>
-                    <span className="text-3xl font-bold text-white">$49</span>
-                    <span className="text-[#A1A1AA] text-sm">/month</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-display font-black text-white tracking-tighter">$49</span>
+                      <span className="text-text-secondary text-[10px] font-black uppercase tracking-widest">/ Month</span>
+                    </div>
+                    <p className="text-[8px] text-text-secondary/60 mt-1 uppercase font-black tracking-widest">Cancel anytime • Instant activation</p>
                   </div>
-                  <span className="text-xs font-bold text-indigo-400 bg-indigo-400/10 px-2 py-1 rounded-md">Save 20% yearly</span>
+                  <div className="text-right">
+                     <span className="text-[9px] font-black text-accent-secondary bg-accent-secondary/10 px-3 py-1.5 rounded-lg border border-accent-secondary/20 uppercase tracking-[0.2em] glow-violet">Enterprise_Ready</span>
+                  </div>
                 </div>
-                <p className="text-xs text-[#71717A]">Cancel anytime. 7-day money-back guarantee.</p>
               </div>
 
               <button
                 onClick={onUpgrade}
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
+                className="w-full py-5 bg-white text-black font-black text-xs uppercase tracking-[0.3em] rounded-2xl shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
               >
-                Start Free Trial
-                <Shield className="w-4 h-4" />
+                Initiate Upgrade Sequence
+                <Zap className="w-4 h-4 fill-black" />
               </button>
             </div>
           </motion.div>
