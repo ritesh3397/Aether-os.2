@@ -1,6 +1,7 @@
 export interface Lead {
   id: string;
   company: string;
+  ownerName?: string;
   website: string;
   email: string;
   instagram: string;

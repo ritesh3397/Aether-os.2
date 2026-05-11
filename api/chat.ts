@@ -90,6 +90,7 @@ OUTPUT FORMAT:
   "leads": [
     {
       "company": "",
+      "ownerName": "",
       "website": "",
       "email": "",
       "instagram": "",
@@ -105,13 +106,13 @@ STRICTLY RETURN JSON ONLY.`;
 }
 
 async function handleOutreachGen(lead: any) {
-  const prompt = `Generate a high-conversion outreach strategy for "${lead.company}" in the "${lead.category}" niche based in ${lead.location}.
+  const prompt = `Generate a high-conversion outreach strategy for "${lead.company}" (Owner: ${lead.ownerName || 'Unknown'}) in the "${lead.category}" niche based in ${lead.location}.
 Summary: ${lead.summary}
 
 Format:
 {
   "coldEmail": "subject and body",
-  "linkedinDm": "short personalizada dm",
+  "linkedinDm": "short personalizada dm (max 200 chars)",
   "shortPitch": "2-sentence elevator pitch"
 }
 STRICTLY RETURN JSON ONLY.`;

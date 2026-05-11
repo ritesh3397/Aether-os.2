@@ -26,11 +26,74 @@ import { generateLeads, getUserStats, updateUserStats } from './services/leadSer
 import { generateOutreach } from './services/outreachService';
 import { cn } from './lib/utils';
 
+const DEMO_LEADS: Lead[] = [
+  {
+    id: 'demo-1',
+    company: 'Tesla Dental NYC',
+    ownerName: 'Dr. Sarah Tesla',
+    website: 'https://tesladental.com',
+    email: 'contact@tesladental.com',
+    instagram: 'tesladental',
+    location: 'New York, NY',
+    category: 'Healthcare',
+    summary: 'Premium dental clinic focusing on advanced cosmetic procedures.',
+    qualityScore: 92
+  },
+  {
+    id: 'demo-2',
+    company: 'Growthify Media',
+    ownerName: 'Marcus Vane',
+    website: 'https://growthify.io',
+    email: 'info@growthify.io',
+    instagram: 'growthify_media',
+    location: 'Remote / SF',
+    category: 'Marketing',
+    summary: 'Performance marketing agency for SaaS companies.',
+    qualityScore: 88
+  },
+  {
+    id: 'demo-3',
+    company: 'Nova Fitness Studio',
+    ownerName: 'Elena Nova',
+    website: 'https://novafitness.co',
+    email: 'hello@novafitness.co',
+    instagram: 'novafit',
+    location: 'Austin, TX',
+    category: 'Fitness',
+    summary: 'Boutique fitness studio with high-end tech-integrated equipment.',
+    qualityScore: 85
+  },
+  {
+    id: 'demo-4',
+    company: 'Apex Roofing Texas',
+    ownerName: 'John Miller',
+    website: 'https://apexroofingtx.com',
+    email: 'sales@apexroofingtx.com',
+    instagram: 'apex_roofing',
+    location: 'Dallas, TX',
+    category: 'Home Services',
+    summary: 'Commercial and residential roofing specialists with 20+ years experience.',
+    qualityScore: 79
+  },
+  {
+    id: 'demo-5',
+    company: 'Quantum AI Labs',
+    ownerName: 'Dr. Aris Thorne',
+    website: 'https://quantumailabs.ai',
+    email: 'research@quantumailabs.ai',
+    instagram: 'quantum_ai',
+    location: 'London, UK',
+    category: 'Technology',
+    summary: 'Deep tech startup focusing on quantum computing algorithms for AI.',
+    qualityScore: 95
+  }
+];
+
 export default function App() {
   const [isLanding, setIsLanding] = useState(true);
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<Lead[]>(DEMO_LEADS);
   const [savedLeads, setSavedLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<UserStats>(getUserStats());
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);

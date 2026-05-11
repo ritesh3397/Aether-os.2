@@ -60,6 +60,12 @@ export default function OutreachModal({ lead, scripts, isOpen, isGenerating, onC
                 <div>
                    <h3 className="font-display font-bold text-xl text-white tracking-tight">{lead?.company || 'AI Drafting Agent'}</h3>
                    <div className="flex items-center gap-2 mt-0.5">
+                      {lead?.ownerName && (
+                        <>
+                          <span className="text-[10px] text-brand-accent font-black uppercase tracking-[0.2em]">{lead.ownerName}</span>
+                          <span className="text-white/20">•</span>
+                        </>
+                      )}
                       <Terminal className="w-3 h-3 text-text-secondary" />
                       <span className="text-[10px] text-text-secondary uppercase tracking-[0.2em] font-black">Strategic_Payload_Generator</span>
                    </div>
