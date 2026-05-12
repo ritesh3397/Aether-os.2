@@ -113,7 +113,7 @@ Format:
 {
   "coldEmail": "subject and body",
   "linkedinDm": "short personalizada dm (max 200 chars)",
-  "shortPitch": "2-sentence elevator pitch"
+  "followUp": "follow-up message to send 3 days later"
 }
 STRICTLY RETURN JSON ONLY.`;
 

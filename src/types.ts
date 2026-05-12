@@ -9,6 +9,8 @@ export interface Lead {
   category: string;
   summary: string;
   qualityScore: number;
+  status: 'verified' | 'unverified' | 'contacted' | 'high-intent';
+  outreach?: OutreachScripts;
 }
 
 export interface UserStats {
@@ -21,7 +23,7 @@ export interface UserStats {
 export interface OutreachScripts {
   coldEmail: string;
   linkedinDm: string;
-  shortPitch: string;
+  followUp: string;
 }
 
 export type View = 'dashboard' | 'search' | 'saved' | 'settings' | 'billing';

@@ -37,7 +37,8 @@ const DEMO_LEADS: Lead[] = [
     location: 'New York, NY',
     category: 'Healthcare',
     summary: 'Premium dental clinic focusing on advanced cosmetic procedures.',
-    qualityScore: 92
+    qualityScore: 92,
+    status: 'verified'
   },
   {
     id: 'demo-2',
@@ -49,7 +50,8 @@ const DEMO_LEADS: Lead[] = [
     location: 'Remote / SF',
     category: 'Marketing',
     summary: 'Performance marketing agency for SaaS companies.',
-    qualityScore: 88
+    qualityScore: 88,
+    status: 'high-intent'
   },
   {
     id: 'demo-3',
@@ -61,7 +63,8 @@ const DEMO_LEADS: Lead[] = [
     location: 'Austin, TX',
     category: 'Fitness',
     summary: 'Boutique fitness studio with high-end tech-integrated equipment.',
-    qualityScore: 85
+    qualityScore: 85,
+    status: 'verified'
   },
   {
     id: 'demo-4',
@@ -73,7 +76,8 @@ const DEMO_LEADS: Lead[] = [
     location: 'Dallas, TX',
     category: 'Home Services',
     summary: 'Commercial and residential roofing specialists with 20+ years experience.',
-    qualityScore: 79
+    qualityScore: 79,
+    status: 'unverified'
   },
   {
     id: 'demo-5',
@@ -85,7 +89,47 @@ const DEMO_LEADS: Lead[] = [
     location: 'London, UK',
     category: 'Technology',
     summary: 'Deep tech startup focusing on quantum computing algorithms for AI.',
-    qualityScore: 95
+    qualityScore: 95,
+    status: 'high-intent'
+  },
+  {
+    id: 'demo-6',
+    company: 'Evergreen Solar',
+    ownerName: 'Sonia Green',
+    website: 'https://evergreensolar.com',
+    email: 'contact@evergreensolar.com',
+    instagram: 'evergreen_solar',
+    location: 'Portland, OR',
+    category: 'Energy',
+    summary: 'Leading residential solar panel installations in the Pacific Northwest.',
+    qualityScore: 82,
+    status: 'verified'
+  },
+  {
+    id: 'demo-7',
+    company: 'Blue Wave Logistics',
+    ownerName: 'Tom Rivera',
+    website: 'https://bluewave.com',
+    email: 'ops@bluewave.com',
+    instagram: 'bluewavelogistics',
+    location: 'Miami, FL',
+    category: 'Logistics',
+    summary: 'Freight forwarding and maritime logistics specializing in Latin American trade.',
+    qualityScore: 76,
+    status: 'unverified'
+  },
+  {
+    id: 'demo-8',
+    company: 'Zenith Legal Group',
+    ownerName: 'Patricia Sterling',
+    website: 'https://zenithlegal.law',
+    email: 'office@zenithlegal.law',
+    instagram: 'zenith_legal',
+    location: 'Chicago, IL',
+    category: 'Legal',
+    summary: 'Corporate law firm handling high-stakes M&A and venture capital deals.',
+    qualityScore: 91,
+    status: 'high-intent'
   }
 ];
 
@@ -102,7 +146,15 @@ export default function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'verified' | 'high-intent'>('all');
   const [error, setError] = useState<string | null>(null);
+
+  const filteredLeads = leads.filter(lead => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'verified') return lead.status === 'verified';
+    if (activeFilter === 'high-intent') return lead.status === 'high-intent';
+    return true;
+  });
 
   useEffect(() => {
     const storedLeads = localStorage.getItem('aether_saved_leads');
@@ -160,6 +212,16 @@ export default function App() {
     try {
       const scripts = await generateOutreach(lead);
       setOutreachScripts(scripts);
+      
+      // Persist scripts in the lead objects for export capability
+      const updateLeads = (prev: Lead[]) => prev.map(l => l.id === lead.id ? { ...l, outreach: scripts } : l);
+      setLeads(updateLeads);
+      setSavedLeads(prev => {
+        const updated = prev.map(l => l.id === lead.id ? { ...l, outreach: scripts } : l);
+        localStorage.setItem('aether_saved_leads', JSON.stringify(updated));
+        return updated;
+      });
+
       setStats(getUserStats());
     } catch (err) {
       console.error(err);
@@ -185,9 +247,28 @@ export default function App() {
     const dataToExport = currentView === 'saved' ? savedLeads : leads;
     if (dataToExport.length === 0) return;
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "Company,Website,Email,Instagram,Location,Category\n"
-      + dataToExport.map(l => `"${l.company}","${l.website}","${l.email}","${l.instagram}","${l.location}","${l.category}"`).join("\n");
+    const headers = ["Company", "Owner", "Website", "Email", "Instagram", "Location", "Category", "Lead Score", "Status", "Cold Email", "LinkedIn DM", "Follow-up"];
+    const csvHeader = headers.join(",") + "\n";
+    
+    const csvRows = dataToExport.map(l => {
+      const outreach = l.outreach || { coldEmail: '', linkedinDm: '', followUp: '' };
+      return [
+        l.company,
+        l.ownerName || '',
+        l.website,
+        l.email,
+        l.instagram,
+        l.location,
+        l.category,
+        l.qualityScore,
+        l.status,
+        outreach.coldEmail.replace(/"/g, '""'),
+        outreach.linkedinDm.replace(/"/g, '""'),
+        outreach.followUp.replace(/"/g, '""')
+      ].map(val => `"${val}"`).join(",");
+    }).join("\n");
+    
+    const csvContent = "data:text/csv;charset=utf-8," + csvHeader + csvRows;
     
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -323,8 +404,33 @@ export default function App() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 space-y-6">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-text-secondary">Data Stream</h3>
-                        <button onClick={() => setLeads([])} className="text-[10px] font-bold text-text-secondary/40 hover:text-rose-400 transition-colors">Wipe Buffer</button>
+                        <div className="flex items-center gap-6">
+                            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-text-secondary">Intelligence_Buffer</h3>
+                            <div className="flex items-center gap-2 p-1 bg-white/[0.03] border border-white/5 rounded-xl">
+                                {[
+                                    { id: 'all', label: 'All Targets' },
+                                    { id: 'verified', label: 'Verified_IO' },
+                                    { id: 'high-intent', label: 'High_Intent' }
+                                ].map(filter => (
+                                    <button 
+                                        key={filter.id}
+                                        onClick={() => setActiveFilter(filter.id as any)}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                            activeFilter === filter.id 
+                                                ? "bg-white text-black glow-white" 
+                                                : "text-text-secondary hover:text-white"
+                                        )}
+                                    >
+                                        {filter.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                           <button onClick={exportLeads} className="text-[9px] font-bold text-text-secondary hover:text-white transition-colors flex items-center gap-2 uppercase tracking-widest"><RefreshCw className="w-3 h-3" /> Re-sync Buffer</button>
+                           <button onClick={() => setLeads([])} className="text-[9px] font-bold text-text-secondary/40 hover:text-rose-400 transition-colors uppercase tracking-widest">Wipe Buffer</button>
+                        </div>
                       </div>
                       
                       <div className="glass-card overflow-hidden">
@@ -336,7 +442,7 @@ export default function App() {
                           </div>
                         ) : (
                           <LeadTable 
-                              leads={leads} 
+                              leads={filteredLeads} 
                               onGenerateOutreach={handleGenerateOutreach}
                               onSaveLead={saveLead}
                           />
@@ -446,7 +552,7 @@ export default function App() {
                     </div>
                   ) : (
                     <LeadTable 
-                      leads={leads} 
+                      leads={filteredLeads} 
                       onGenerateOutreach={handleGenerateOutreach}
                       onSaveLead={saveLead}
                     />

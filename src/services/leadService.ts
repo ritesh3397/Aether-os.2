@@ -60,7 +60,8 @@ export const generateLeads = async (
     const leads: Lead[] = (data.leads || []).map((l: any) => ({
       ...l,
       id: Math.random().toString(36).substr(2, 9),
-      qualityScore: Math.floor(Math.random() * 20) + 80
+      qualityScore: Math.floor(Math.random() * 20) + 80,
+      status: (['verified', 'high-intent', 'unverified'])[Math.floor(Math.random() * 3)] as Lead['status']
     }));
 
     // Deduct credits

@@ -13,7 +13,7 @@ interface OutreachModalProps {
 }
 
 export default function OutreachModal({ lead, scripts, isOpen, isGenerating, onClose }: OutreachModalProps) {
-  const [activeTab, setActiveTab] = useState<'email' | 'linkedin' | 'pitch'>('email');
+  const [activeTab, setActiveTab] = useState<'email' | 'linkedin' | 'followUp'>('email');
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -30,7 +30,7 @@ export default function OutreachModal({ lead, scripts, isOpen, isGenerating, onC
     switch (activeTab) {
       case 'email': return scripts.coldEmail;
       case 'linkedin': return scripts.linkedinDm;
-      case 'pitch': return scripts.shortPitch;
+      case 'followUp': return scripts.followUp;
     }
   };
 
@@ -85,7 +85,7 @@ export default function OutreachModal({ lead, scripts, isOpen, isGenerating, onC
               {[
                 { id: 'email', label: 'Synthetic Email' },
                 { id: 'linkedin', label: 'Tactical DM' },
-                { id: 'pitch', label: 'Elevator Flash' }
+                { id: 'followUp', label: 'Follow-up' }
               ].map((tab) => (
                 <button
                   key={tab.id}

@@ -36,7 +36,7 @@ export const generateOutreach = async (lead: Lead): Promise<OutreachScripts> => 
     return {
       coldEmail: data.coldEmail,
       linkedinDm: data.linkedinDm,
-      shortPitch: data.shortPitch
+      followUp: data.followUp
     };
   } catch (e: any) {
     console.error("Outreach generation error:", e);
